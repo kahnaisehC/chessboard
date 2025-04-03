@@ -1,7 +1,7 @@
-package main
+package chessboard
 
 import (
-	"fmt"
+	"errors"
 	"strconv"
 	"strings"
 )
@@ -56,6 +56,12 @@ const initialFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 type pair struct {
 	col int8
 	row int8
+}
+
+type Move struct {
+	from      pair
+	to        pair
+	promotion int
 }
 
 type Chessgame struct {
@@ -156,8 +162,255 @@ func CreateChessgame() Chessgame {
 	return chessgame
 }
 
-func (c *Chessgame) makeMove(move string) bool {
-	return true
+func (c *Chessgame) getPiece(square pair) int {
+	return 0
+}
+
+func isWhite(piece int) bool {
+	return piece > 7
+}
+
+func (c *Chessgame) getMoveList() []Move {
+	var directions []pair
+	var movements []pair
+
+	for col := int8(0); col <= 8; col++ {
+		for row := int8(0); row <= 8; row++ {
+			piece := c.getPiece(pair{col: col, row: row})
+			switch piece {
+			case BPAWN:
+				if row == 6 &&
+					c.getPiece(pair{col: col, row: row - 1}) == 0 &&
+					c.getPiece(pair{col: col, row: row - 2}) == 0 {
+					movements = append(movements, pair{row: row - 2, col: col})
+				}
+				if isWhite(c.getPiece(pair{col: col - 1, row: row - 1})) {
+					movements = append(movements, pair{col: col - 1, row: row - 1})
+				}
+				if isWhite(c.getPiece(pair{col: col + 1, row: row - 1})) {
+					movements = append(movements, pair{col: col + 1, row: row - 1})
+				}
+				if c.getPiece(pair{col: col, row: row - 1}) == 0 {
+					movements = append(movements, pair{col: col, row: row - 1})
+				}
+
+			case WPAWN:
+				if row == 1 &&
+					c.getPiece(pair{col: col, row: row + 1}) == 0 &&
+					c.getPiece(pair{col: col, row: row + 2}) == 0 {
+					movements = append(movements, pair{row: row + 2, col: col})
+				}
+				if !isWhite(c.getPiece(pair{col: col - 1, row: row + 1})) {
+					movements = append(movements, pair{col: col - 1, row: row + 1})
+				}
+				if !isWhite(c.getPiece(pair{col: col + 1, row: row + 1})) {
+					movements = append(movements, pair{col: col + 1, row: row + 1})
+				}
+				if c.getPiece(pair{col: col, row: row + 1}) == 0 {
+					movements = append(movements, pair{col: col, row: row + 1})
+				}
+
+			case BKING:
+				fallthrough
+			case WKING:
+				movements = []pair{
+					{
+						col: -1,
+						row: -1,
+					},
+					{
+						col: -1,
+						row: 0,
+					},
+					{
+						col: -1,
+						row: 1,
+					},
+					{
+						col: 0,
+						row: -1,
+					},
+					{
+						col: 0,
+						row: 1,
+					},
+					{
+						col: 1,
+						row: -1,
+					},
+					{
+						col: 1,
+						row: 0,
+					},
+					{
+						col: 1,
+						row: 1,
+					},
+				}
+			case BKNIGHT:
+				fallthrough
+			case WKNIGHT:
+				movements = []pair{
+					{
+						col: -2,
+						row: -1,
+					},
+					{
+						col: -2,
+						row: 1,
+					},
+					{
+						col: 2,
+						row: 1,
+					},
+					{
+						col: 2,
+						row: -1,
+					},
+					{
+						col: 1,
+						row: 2,
+					},
+					{
+						col: 1,
+						row: -2,
+					},
+					{
+						col: -1,
+						row: -2,
+					},
+					{
+						col: -1,
+						row: 2,
+					},
+				}
+			case BBISHOP:
+				fallthrough
+			case WBISHOP:
+				directions = []pair{
+					{
+						col: -1,
+						row: -1,
+					},
+					{
+						col: 1,
+						row: 1,
+					},
+					{
+						col: -1,
+						row: 1,
+					},
+					{
+						col: -1,
+						row: 1,
+					},
+				}
+			case BROOK:
+				fallthrough
+			case WROOK:
+				directions = []pair{
+					{
+						col: 1,
+						row: 0,
+					},
+					{
+						col: 0,
+						row: 1,
+					},
+					{
+						col: -1,
+						row: 0,
+					},
+					{
+						col: 0,
+						row: -1,
+					},
+				}
+			case BQUEEN:
+				fallthrough
+			case WQUEEN:
+				directions = []pair{
+					{
+						col: 1,
+						row: 0,
+					},
+					{
+						col: 0,
+						row: 1,
+					},
+					{
+						col: -1,
+						row: 0,
+					},
+					{
+						col: 0,
+						row: -1,
+					},
+					{
+						col: -1,
+						row: -1,
+					},
+					{
+						col: 1,
+						row: 1,
+					},
+					{
+						col: -1,
+						row: 1,
+					},
+					{
+						col: -1,
+						row: 1,
+					},
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func (c *Chessgame) makeMove(move string) error {
+	if len(move) < 5 {
+		return errors.New("Invalid move string")
+	}
+	version := move[0]
+	switch version {
+	case '0':
+		{
+			from := pair{
+				col: int8(move[1] - '`'),
+				row: int8(move[2] - '0'),
+			}
+			to := pair{
+				col: int8(move[3] - '`'),
+				row: int8(move[4] - '0'),
+			}
+			promotion := move[5]
+			piece := c.getPiece(from)
+			switch piece {
+			case WKING:
+			case WQUEEN:
+			case WROOK:
+			case WBISHOP:
+			case WKNIGHT:
+			case WPAWN:
+			case BKING:
+			case BQUEEN:
+			case BROOK:
+			case BBISHOP:
+			case BKNIGHT:
+			case BPAWN:
+			case 0:
+				return errors.New("No piece encountered in from square")
+			}
+
+		}
+
+	default:
+		return errors.New("Invalid version of move")
+	}
+	return nil
 }
 
 func main() {
