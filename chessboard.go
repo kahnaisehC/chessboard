@@ -162,128 +162,99 @@ func CreateChessgame() Chessgame {
 	return chessgame
 }
 
+func (c *Chessgame) CheckMoveLegality(Move) bool {
+	return true
+}
+
 func (c *Chessgame) getPiece(square pair) int {
 	return 0
 }
 
 func isWhite(piece int) bool {
-	return piece > 7
+	return piece < BKING
 }
+
+const (
+	PI = 3.14
+	E  = 2.71
+)
 
 func (c *Chessgame) getMoveList() []Move {
 	var directions []pair
-	var movements []pair
+	var movements []Move
 
 	for col := int8(0); col <= 8; col++ {
 		for row := int8(0); row <= 8; row++ {
-			piece := c.getPiece(pair{col: col, row: row})
+			var toSquares []pair
+			from := pair{col: col, row: row}
+			piece := c.getPiece(from)
 			switch piece {
 			case BPAWN:
 				if row == 6 &&
 					c.getPiece(pair{col: col, row: row - 1}) == 0 &&
 					c.getPiece(pair{col: col, row: row - 2}) == 0 {
-					movements = append(movements, pair{row: row - 2, col: col})
+					toSquares = append(toSquares, pair{row: row - 2, col: col})
 				}
 				if isWhite(c.getPiece(pair{col: col - 1, row: row - 1})) {
-					movements = append(movements, pair{col: col - 1, row: row - 1})
+					toSquares = append(toSquares, pair{col: col - 1, row: row - 1})
 				}
 				if isWhite(c.getPiece(pair{col: col + 1, row: row - 1})) {
-					movements = append(movements, pair{col: col + 1, row: row - 1})
+					toSquares = append(toSquares, pair{col: col + 1, row: row - 1})
 				}
 				if c.getPiece(pair{col: col, row: row - 1}) == 0 {
-					movements = append(movements, pair{col: col, row: row - 1})
+					toSquares = append(toSquares, pair{col: col, row: row - 1})
 				}
 
 			case WPAWN:
 				if row == 1 &&
 					c.getPiece(pair{col: col, row: row + 1}) == 0 &&
 					c.getPiece(pair{col: col, row: row + 2}) == 0 {
-					movements = append(movements, pair{row: row + 2, col: col})
+					toSquares = append(toSquares, pair{row: row + 2, col: col})
 				}
 				if !isWhite(c.getPiece(pair{col: col - 1, row: row + 1})) {
-					movements = append(movements, pair{col: col - 1, row: row + 1})
+					toSquares = append(toSquares, pair{col: col - 1, row: row + 1})
 				}
 				if !isWhite(c.getPiece(pair{col: col + 1, row: row + 1})) {
-					movements = append(movements, pair{col: col + 1, row: row + 1})
+					toSquares = append(toSquares, pair{col: col + 1, row: row + 1})
 				}
 				if c.getPiece(pair{col: col, row: row + 1}) == 0 {
-					movements = append(movements, pair{col: col, row: row + 1})
+					toSquares = append(toSquares, pair{col: col, row: row + 1})
 				}
-
 			case BKING:
+				// TODO: handle castling
+				if c.BlackKingCastle {
+					toSquares = append(toSquares, pair{col: col + 2, row: row})
+				}
+				if c.BlackQueenCastle {
+					toSquares = append(toSquares, pair{col: col - 2, row: row})
+				}
 				fallthrough
 			case WKING:
-				movements = []pair{
-					{
-						col: -1,
-						row: -1,
-					},
-					{
-						col: -1,
-						row: 0,
-					},
-					{
-						col: -1,
-						row: 1,
-					},
-					{
-						col: 0,
-						row: -1,
-					},
-					{
-						col: 0,
-						row: 1,
-					},
-					{
-						col: 1,
-						row: -1,
-					},
-					{
-						col: 1,
-						row: 0,
-					},
-					{
-						col: 1,
-						row: 1,
-					},
+				if c.WhiteKingCastle && piece == WKING {
+					toSquares = append(toSquares, pair{col: col + 2, row: row})
+				}
+				if c.WhiteQueenCastle && piece == WKING {
+					toSquares = append(toSquares, pair{col: col - 2, row: row})
+				}
+				for i := int8(-1); i < 2; i++ {
+					for j := int8(-1); j < 2; j++ {
+						if i == j && i == 0 {
+							continue
+						}
+						move := pair{col + i, row + j}
+						toSquares = append(toSquares, move)
+					}
 				}
 			case BKNIGHT:
 				fallthrough
 			case WKNIGHT:
-				movements = []pair{
-					{
-						col: -2,
-						row: -1,
-					},
-					{
-						col: -2,
-						row: 1,
-					},
-					{
-						col: 2,
-						row: 1,
-					},
-					{
-						col: 2,
-						row: -1,
-					},
-					{
-						col: 1,
-						row: 2,
-					},
-					{
-						col: 1,
-						row: -2,
-					},
-					{
-						col: -1,
-						row: -2,
-					},
-					{
-						col: -1,
-						row: 2,
-					},
+				for i := int8(-2); i < 5; i += 4 {
+					for j := int8(-1); j < 2; j += 2 {
+						toSquares = append(toSquares, pair{col: col + i, row: row + j})
+						toSquares = append(toSquares, pair{col: col + j, row: row + i})
+					}
 				}
+
 			case BBISHOP:
 				fallthrough
 			case WBISHOP:
@@ -364,10 +335,37 @@ func (c *Chessgame) getMoveList() []Move {
 					},
 				}
 			}
+			for _, to := range toSquares {
+				move := Move{
+					from:      from,
+					to:        to,
+					promotion: 'Q',
+				}
+
+				if c.CheckMoveLegality(move) {
+					movements = append(movements, move)
+					if c.getPiece(from) == WPAWN && from.row == 6 ||
+						c.getPiece(from) == BPAWN && from.row == 1 {
+						move.promotion = 'R'
+						movements = append(movements, Move{from, to, 'R'})
+						move.promotion = 'N'
+						movements = append(movements, Move{from, to, 'R'})
+						move.promotion = 'B'
+						movements = append(movements, Move{from, to, 'R'})
+					}
+				}
+			}
+			for _, direction := range directions {
+				for {
+					// if outofbounds
+					// if piece of the same color
+					// if piece of different color
+				}
+			}
 		}
 	}
 
-	return nil
+	return movements
 }
 
 func (c *Chessgame) makeMove(move string) error {
