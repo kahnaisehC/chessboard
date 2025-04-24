@@ -162,6 +162,10 @@ func CreateChessgame() Chessgame {
 	return chessgame
 }
 
+func inBounds(p pair) bool {
+	return p.col >= 0 && p.col < 8 && p.row >= 0 && p.row < 8
+}
+
 func (c *Chessgame) CheckMoveLegality(Move) bool {
 	return true
 }
@@ -171,23 +175,22 @@ func (c *Chessgame) getPiece(square pair) int {
 }
 
 func isWhite(piece int) bool {
-	return piece < BKING
+	return piece > 0 && piece < BKING
 }
 
-const (
-	PI = 3.14
-	E  = 2.71
-)
-
 func (c *Chessgame) getMoveList() []Move {
-	var directions []pair
+	// Check all possible moves of all pieces
+	// Check move legality of every move
+	// Return filtered movement list
 	var movements []Move
-
 	for col := int8(0); col <= 8; col++ {
 		for row := int8(0); row <= 8; row++ {
+			var directions []pair
 			var toSquares []pair
+			var auxSquare pair
 			from := pair{col: col, row: row}
 			piece := c.getPiece(from)
+			pieceColor := isWhite(piece)
 			switch piece {
 			case BPAWN:
 				if row == 6 &&
@@ -195,11 +198,13 @@ func (c *Chessgame) getMoveList() []Move {
 					c.getPiece(pair{col: col, row: row - 2}) == 0 {
 					toSquares = append(toSquares, pair{row: row - 2, col: col})
 				}
-				if isWhite(c.getPiece(pair{col: col - 1, row: row - 1})) {
-					toSquares = append(toSquares, pair{col: col - 1, row: row - 1})
+				auxSquare = pair{col: col - 1, row: row - 1}
+				if isWhite(c.getPiece(auxSquare)) || c.EnPassantSquare == auxSquare {
+					toSquares = append(toSquares, auxSquare)
 				}
-				if isWhite(c.getPiece(pair{col: col + 1, row: row - 1})) {
-					toSquares = append(toSquares, pair{col: col + 1, row: row - 1})
+				auxSquare = pair{col: col + 1, row: row - 1}
+				if isWhite(c.getPiece(auxSquare)) || c.EnPassantSquare == auxSquare {
+					toSquares = append(toSquares, auxSquare)
 				}
 				if c.getPiece(pair{col: col, row: row - 1}) == 0 {
 					toSquares = append(toSquares, pair{col: col, row: row - 1})
@@ -211,10 +216,12 @@ func (c *Chessgame) getMoveList() []Move {
 					c.getPiece(pair{col: col, row: row + 2}) == 0 {
 					toSquares = append(toSquares, pair{row: row + 2, col: col})
 				}
-				if !isWhite(c.getPiece(pair{col: col - 1, row: row + 1})) {
+				auxSquare = pair{col: col - 1, row: row + 1}
+				if !isWhite(c.getPiece(auxSquare)) || c.EnPassantSquare == auxSquare {
 					toSquares = append(toSquares, pair{col: col - 1, row: row + 1})
 				}
-				if !isWhite(c.getPiece(pair{col: col + 1, row: row + 1})) {
+				auxSquare = pair{col: col + 1, row: row + 1}
+				if !isWhite(c.getPiece(auxSquare)) || c.EnPassantSquare == auxSquare {
 					toSquares = append(toSquares, pair{col: col + 1, row: row + 1})
 				}
 				if c.getPiece(pair{col: col, row: row + 1}) == 0 {
@@ -276,6 +283,7 @@ func (c *Chessgame) getMoveList() []Move {
 						row: 1,
 					},
 				}
+
 			case BROOK:
 				fallthrough
 			case WROOK:
@@ -335,6 +343,24 @@ func (c *Chessgame) getMoveList() []Move {
 					},
 				}
 			}
+			for _, direction := range directions {
+				currSquare := addPair(direction, from)
+				currSquarePieceColor := isWhite(c.getPiece(currSquare))
+				for {
+					if !inBounds(currSquare) {
+						break
+					}
+					if currSquarePieceColor == pieceColor {
+						break
+					}
+					if currSquarePieceColor != pieceColor {
+						toSquares = append(toSquares, currSquare)
+						break
+					}
+					toSquares = append(toSquares, currSquare)
+					currSquare = addPair(currSquare, direction)
+				}
+			}
 			for _, to := range toSquares {
 				move := Move{
 					from:      from,
@@ -346,25 +372,14 @@ func (c *Chessgame) getMoveList() []Move {
 					movements = append(movements, move)
 					if c.getPiece(from) == WPAWN && from.row == 6 ||
 						c.getPiece(from) == BPAWN && from.row == 1 {
-						move.promotion = 'R'
 						movements = append(movements, Move{from, to, 'R'})
-						move.promotion = 'N'
-						movements = append(movements, Move{from, to, 'R'})
-						move.promotion = 'B'
-						movements = append(movements, Move{from, to, 'R'})
+						movements = append(movements, Move{from, to, 'N'})
+						movements = append(movements, Move{from, to, 'B'})
 					}
-				}
-			}
-			for _, direction := range directions {
-				for {
-					// if outofbounds
-					// if piece of the same color
-					// if piece of different color
 				}
 			}
 		}
 	}
-
 	return movements
 }
 
