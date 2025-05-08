@@ -177,7 +177,7 @@ func inBounds(p pair) bool {
 }
 
 func (c *Chessgame) erasePiece(s pair) {
-	// NOTE: check if range is a copy or a reference
+	// NOTE: check if range is a copy or a reference. It copies
 	piecePosition := pairToInt(s)
 	bitAux := ^uint64(0) ^ uint64(1<<piecePosition)
 
