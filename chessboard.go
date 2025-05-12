@@ -36,6 +36,42 @@ var charToPiece = map[byte]int{
 	'p': BPAWN,
 }
 
+var bishopSlides = []pair{
+	{col: 1, row: 1},
+	{col: -1, row: 1},
+	{col: -1, row: -1},
+	{col: 1, row: -1},
+}
+
+var rookSlides = []pair{
+	{col: 1, row: 0},
+	{col: -1, row: 0},
+	{col: 0, row: 1},
+	{col: 0, row: -1},
+}
+
+var kingMoves = []pair{
+	{col: 1, row: 1},
+	{col: 1, row: 0},
+	{col: 1, row: -1},
+	{col: -1, row: 0},
+	{col: -1, row: 1},
+	{col: -1, row: -1},
+	{col: 0, row: 1},
+	{col: 0, row: -1},
+}
+
+var knightMoves = []pair{
+	{col: 2, row: 1},
+	{col: 2, row: -1},
+	{col: -2, row: 1},
+	{col: -2, row: -1},
+	{col: 1, row: 2},
+	{col: 1, row: -2},
+	{col: -1, row: 2},
+	{col: -1, row: -2},
+}
+
 var pieceToChar = map[int]byte{
 	WKING:   'K',
 	WQUEEN:  'Q',
@@ -96,6 +132,10 @@ func addPair(a, b pair) pair {
 		col: a.col + b.col,
 		row: a.row + b.row,
 	}
+}
+
+func intToPair(n int) pair {
+	return pair{col: int8(n / 8), row: int8(n % 8)}
 }
 
 func pairToInt(a pair) int {
@@ -193,8 +233,130 @@ func (c *Chessgame) putPiece(s pair, piece int) {
 	c.BoardState[piece] |= bitAux
 }
 
-func (c *Chessgame) SquareIsThreattenned(color bool, p pair) bool {
+func (c *Chessgame) SquareIsThreatened(white bool, p pair) bool {
+	if white {
+		// pawn
+		if c.getPiece(addPair(p, pair{col: 1, row: 1})) == BPAWN {
+			return true
+		}
+		if c.getPiece(addPair(p, pair{col: 1, row: -1})) == BPAWN {
+			return true
+		}
+		// knight
+		for _, move := range knightMoves {
+			if c.getPiece(addPair(p, move)) == BKNIGHT {
+				return true
+			}
+		}
+		// king
+		for _, move := range kingMoves {
+			if c.getPiece(addPair(p, move)) == BKING {
+				return true
+			}
+		}
+		// bishop
+		for _, direction := range bishopSlides {
+			nextSquare := addPair(p, direction)
+			for inBounds(nextSquare) {
+				piece := c.getPiece(nextSquare)
+				if isWhite(piece) {
+					break
+				}
+				if piece == BQUEEN || piece == BBISHOP {
+					return true
+				}
+				if piece != 0 {
+					break
+				}
+
+			}
+		}
+		// rook
+		for _, direction := range rookSlides {
+			nextSquare := addPair(p, direction)
+			for inBounds(nextSquare) {
+				piece := c.getPiece(nextSquare)
+				if isWhite(piece) {
+					break
+				}
+				if piece == BQUEEN || piece == BROOK {
+					return true
+				}
+				if piece != 0 {
+					break
+				}
+
+			}
+		}
+	} else {
+		// pawn
+		if c.getPiece(addPair(p, pair{col: -1, row: 1})) == WPAWN {
+			return true
+		}
+		if c.getPiece(addPair(p, pair{col: -1, row: -1})) == WPAWN {
+			return true
+		}
+		// knight
+		for _, move := range knightMoves {
+			if c.getPiece(addPair(p, move)) == WKNIGHT {
+				return true
+			}
+		}
+		// king
+		for _, move := range kingMoves {
+			if c.getPiece(addPair(p, move)) == WKING {
+				return true
+			}
+		}
+		// bishop
+		for _, direction := range bishopSlides {
+			nextSquare := addPair(p, direction)
+			for inBounds(nextSquare) {
+				piece := c.getPiece(nextSquare)
+				if !isWhite(piece) {
+					break
+				}
+				if piece == WQUEEN || piece == WBISHOP {
+					return true
+				}
+				if piece != 0 {
+					break
+				}
+
+			}
+		}
+		// rook
+		for _, direction := range rookSlides {
+			nextSquare := addPair(p, direction)
+			for inBounds(nextSquare) {
+				piece := c.getPiece(nextSquare)
+				if !isWhite(piece) {
+					break
+				}
+				if piece == WQUEEN || piece == WROOK {
+					return true
+				}
+				if piece != 0 {
+					break
+				}
+
+			}
+		}
+	}
 	return false
+}
+
+func (c *Chessgame) GetKingPosition() pair {
+	king := BKING
+	if c.WhiteToMove {
+		king = WKING
+	}
+	for i := 0; i < 64; i++ {
+		if 1 == ((1 << i) | c.BoardState[king]) {
+			return intToPair(i)
+		}
+	}
+	return intToPair(64)
 }
 
 func (c *Chessgame) CheckMoveLegality(move Move) bool {
@@ -234,7 +396,7 @@ func (c *Chessgame) CheckMoveLegality(move Move) bool {
 			if !c.BlackQueenCastle {
 				return false
 			}
-			if c.SquareIsThreattenned(WHITE, sq("e8")) || c.SquareIsThreattenned(WHITE, sq("d8")) || c.SquareIsThreattenned(WHITE, sq("c8")) {
+			if c.SquareIsThreatened(WHITE, sq("e8")) || c.SquareIsThreatened(WHITE, sq("d8")) || c.SquareIsThreatened(WHITE, sq("c8")) {
 				return false
 			}
 			if c.getPiece(sq("d8")) != 0 || c.getPiece(sq("c8")) != 0 || c.getPiece(sq("b8")) != 0 {
@@ -248,7 +410,7 @@ func (c *Chessgame) CheckMoveLegality(move Move) bool {
 			if !c.BlackKingCastle {
 				return false
 			}
-			if c.SquareIsThreattenned(WHITE, sq("e8")) || c.SquareIsThreattenned(WHITE, sq("f8")) || c.SquareIsThreattenned(WHITE, sq("g8")) {
+			if c.SquareIsThreatened(WHITE, sq("e8")) || c.SquareIsThreatened(WHITE, sq("f8")) || c.SquareIsThreatened(WHITE, sq("g8")) {
 				return false
 			}
 			if c.getPiece(sq("f8")) != 0 || c.getPiece(sq("g8")) != 0 {
@@ -262,7 +424,7 @@ func (c *Chessgame) CheckMoveLegality(move Move) bool {
 			if !c.WhiteQueenCastle {
 				return false
 			}
-			if c.SquareIsThreattenned(BLACK, sq("e1")) || c.SquareIsThreattenned(BLACK, sq("d1")) || c.SquareIsThreattenned(BLACK, sq("c1")) {
+			if c.SquareIsThreatened(BLACK, sq("e1")) || c.SquareIsThreatened(BLACK, sq("d1")) || c.SquareIsThreatened(BLACK, sq("c1")) {
 				return false
 			}
 			if c.getPiece(sq("d1")) != 0 || c.getPiece(sq("c1")) != 0 || c.getPiece(sq("b1")) != 0 {
@@ -275,7 +437,7 @@ func (c *Chessgame) CheckMoveLegality(move Move) bool {
 			if !c.WhiteKingCastle {
 				return false
 			}
-			if c.SquareIsThreattenned(BLACK, sq("e1")) || c.SquareIsThreattenned(BLACK, sq("f1")) || c.SquareIsThreattenned(BLACK, sq("g1")) {
+			if c.SquareIsThreatened(BLACK, sq("e1")) || c.SquareIsThreatened(BLACK, sq("f1")) || c.SquareIsThreatened(BLACK, sq("g1")) {
 				return false
 			}
 			if c.getPiece(sq("f1")) != 0 || c.getPiece(sq("g1")) != 0 {
@@ -295,6 +457,8 @@ func (c *Chessgame) CheckMoveLegality(move Move) bool {
 	}
 
 	// check legality of c.BoardState
+	kingPosition := c.GetKingPosition()
+	threat := c.SquareIsThreatened(c.WhiteToMove, kingPosition)
 
 	// restore c.BoardState
 	for _, square := range squaresToErase {
@@ -305,10 +469,13 @@ func (c *Chessgame) CheckMoveLegality(move Move) bool {
 		c.putPiece(squaresToPutPieces[i], piecesPerSquare[i])
 	}
 
-	return true
+	return threat
 }
 
 func (c *Chessgame) getPiece(square pair) int {
+	if !inBounds(square) {
+		return 0
+	}
 	for i := 0; i < len(c.BoardState); i++ {
 		if c.BoardState[i]&uint64(1<<pairToInt(square)) == 1 {
 			return i
@@ -546,6 +713,7 @@ func (c *Chessgame) makeMove(move string) error {
 			piece := c.getPiece(from)
 			switch piece {
 			case WKING:
+
 			case WQUEEN:
 			case WROOK:
 			case WBISHOP:
