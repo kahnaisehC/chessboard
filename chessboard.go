@@ -698,42 +698,37 @@ func (c *Chessgame) makeMove(move string) error {
 		return errors.New("Invalid move string")
 	}
 	version := move[0]
+	var from pair
+	var to pair
+	var promotion int
 	switch version {
 	case '0':
 		{
-			from := pair{
+			from = pair{
 				col: int8(move[1] - '`'),
 				row: int8(move[2] - '0'),
 			}
-			to := pair{
+			to = pair{
 				col: int8(move[3] - '`'),
 				row: int8(move[4] - '0'),
 			}
-			promotion := move[5]
-			piece := c.getPiece(from)
-			switch piece {
-			case WKING:
-
-			case WQUEEN:
-			case WROOK:
-			case WBISHOP:
-			case WKNIGHT:
-			case WPAWN:
-			case BKING:
-			case BQUEEN:
-			case BROOK:
-			case BBISHOP:
-			case BKNIGHT:
-			case BPAWN:
-			case 0:
-				return errors.New("No piece encountered in from square")
-			}
-
+			promotion = int(move[5] - '0')
 		}
 
 	default:
 		return errors.New("Invalid version of move")
 	}
+
+	if !c.CheckMoveLegality(Move{from: from, to: to, promotion: int(promotion)}) {
+		return errors.New("the move is Illegal")
+	}
+
+	c.putPiece(to, c.getPiece(from))
+	c.erasePiece(from)
+	if promotion != 0 {
+		c.putPiece(to, promotion)
+	}
+
 	return nil
 }
 
