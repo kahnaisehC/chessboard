@@ -2,6 +2,7 @@ package chessboard
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -121,6 +122,12 @@ type Chessgame struct {
 	HalfmoveClock   int
 	FullmoveCounter int
 }
+
+// Main interaction interface
+func (c *Chessgame) PrintBoard()
+func (c *Chessgame) MakeMove(s string) error
+func (c *Chessgame) GameOver() bool
+func (c *Chessgame) 
 
 // WARNING: FUNCTION VERY PERIGLOSA. Use at your own risk or smth
 func sq(s string) pair {
@@ -732,6 +739,6 @@ func (c *Chessgame) makeMove(move string) error {
 	return nil
 }
 
-func main() {
-	CreateChessgame()
+func (c *Chessgame) DoSomething() {
+	fmt.Printf("hello")
 }
