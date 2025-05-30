@@ -106,28 +106,63 @@ type Move struct {
 	promotion int
 }
 
-type Chessgame struct {
-	Moves []string
-	// Variant     string
-	WhiteToMove bool
-	BoardState  [13]uint64
+/*
 
-	EnPassantSquare pair
+	CreateChessboard(FEN);
 
+	Chessboard.CheckMoveLegality(Move);
+	Chessboard.GetMoveList();
+	Chessboard.GetTripleRepetition();
+	Chessboard.InsufficientMaterial();
+	Chessboard.GetResult();
+	Chessboard.GetFEN();
+
+	Chessboard.MakeMove(Move);
+	Chessboard.DeclareResult(Result);
+	Chessboard.UndoMove()
+
+
+	BoardState       [13]uint64
+	WhiteToMove      bool
+	EnPassantSquare  pair
 	BlackKingCastle  bool
 	BlackQueenCastle bool
 	WhiteKingCastle  bool
 	WhiteQueenCastle bool
+	Moves            []string
+
+*/
+
+type Chessboard struct {
+	// Variant     string
+	BoardState       [13]uint64
+	WhiteToMove      bool
+	EnPassantSquare  pair
+	BlackKingCastle  bool
+	BlackQueenCastle bool
+	WhiteKingCastle  bool
+	WhiteQueenCastle bool
+	Moves            []string
 
 	HalfmoveClock   int
 	FullmoveCounter int
 }
 
 // Main interaction interface
-func (c *Chessgame) PrintBoard()
-func (c *Chessgame) MakeMove(s string) error
-func (c *Chessgame) GameOver() bool
-func (c *Chessgame) 
+
+func (c *Chessboard) CheckMoveLegality(Move)
+func (c *Chessboard) GetMoveList()
+func (c *Chessboard) GetTripleRepetition()
+func (c *Chessboard) InsufficientMaterial()
+func (c *Chessboard) GetResult()
+func (c *Chessboard) GetFEN()
+
+func (c *Chessboard) MakeMove(Move)
+func (c *Chessboard) DeclareResult()
+func (c *Chessboard) UndoMove()
+
+func (c *Chessboard) PrintBoard()
+func (c *Chessboard) GameOver() bool
 
 // WARNING: FUNCTION VERY PERIGLOSA. Use at your own risk or smth
 func sq(s string) pair {
@@ -149,8 +184,8 @@ func pairToInt(a pair) int {
 	return int(8*a.row + a.col)
 }
 
-func CreateChessgame() Chessgame {
-	chessgame := Chessgame{}
+func CreateChessboard(FEN string) Chessboard {
+	chessgame := Chessboard{}
 	row, col := int8(0), int8(0)
 	FENparts := strings.Split(initialFEN, " ")
 
@@ -223,7 +258,7 @@ func inBounds(p pair) bool {
 	return p.col >= 0 && p.col < 8 && p.row >= 0 && p.row < 8
 }
 
-func (c *Chessgame) erasePiece(s pair) {
+func (c *Chessboard) erasePiece(s pair) {
 	// NOTE: check if range is a copy or a reference. It copies
 	piecePosition := pairToInt(s)
 	bitAux := ^uint64(0) ^ uint64(1<<piecePosition)
@@ -233,14 +268,14 @@ func (c *Chessgame) erasePiece(s pair) {
 	}
 }
 
-func (c *Chessgame) putPiece(s pair, piece int) {
+func (c *Chessboard) putPiece(s pair, piece int) {
 	c.erasePiece(s)
 	piecePosition := pairToInt(s)
 	bitAux := uint64(1 << piecePosition)
 	c.BoardState[piece] |= bitAux
 }
 
-func (c *Chessgame) SquareIsThreatened(white bool, p pair) bool {
+func (c *Chessboard) SquareIsThreatened(white bool, p pair) bool {
 	if white {
 		// pawn
 		if c.getPiece(addPair(p, pair{col: 1, row: 1})) == BPAWN {
@@ -353,7 +388,7 @@ func (c *Chessgame) SquareIsThreatened(white bool, p pair) bool {
 	return false
 }
 
-func (c *Chessgame) GetKingPosition() pair {
+func (c *Chessboard) GetKingPosition() pair {
 	king := BKING
 	if c.WhiteToMove {
 		king = WKING
@@ -366,7 +401,7 @@ func (c *Chessgame) GetKingPosition() pair {
 	return intToPair(64)
 }
 
-func (c *Chessgame) CheckMoveLegality(move Move) bool {
+func (c *Chessboard) CheckMoveLegality(move Move) bool {
 	// check inbounds
 	if !(inBounds(move.from) || inBounds(move.from)) {
 		return false
@@ -479,7 +514,7 @@ func (c *Chessgame) CheckMoveLegality(move Move) bool {
 	return threat
 }
 
-func (c *Chessgame) getPiece(square pair) int {
+func (c *Chessboard) getPiece(square pair) int {
 	if !inBounds(square) {
 		return 0
 	}
@@ -495,7 +530,7 @@ func isWhite(piece int) bool {
 	return piece > 0 && piece < BKING
 }
 
-func (c *Chessgame) getMoveList() []Move {
+func (c *Chessboard) getMoveList() []Move {
 	// Check all possible moves of all pieces
 	// Check move legality of every move
 	// Return filtered movement list
@@ -700,7 +735,7 @@ func (c *Chessgame) getMoveList() []Move {
 	return movements
 }
 
-func (c *Chessgame) makeMove(move string) error {
+func (c *Chessboard) makeMove(move string) error {
 	if len(move) < 5 {
 		return errors.New("Invalid move string")
 	}
@@ -739,6 +774,6 @@ func (c *Chessgame) makeMove(move string) error {
 	return nil
 }
 
-func (c *Chessgame) DoSomething() {
+func (c *Chessboard) DoSomething() {
 	fmt.Printf("hello")
 }
