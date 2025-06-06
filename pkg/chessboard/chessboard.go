@@ -106,33 +106,6 @@ type Move struct {
 	promotion int
 }
 
-/*
-
-	CreateChessboard(FEN);
-
-	Chessboard.CheckMoveLegality(Move);
-	Chessboard.GetMoveList();
-	Chessboard.GetTripleRepetition();
-	Chessboard.InsufficientMaterial();
-	Chessboard.GetResult();
-	Chessboard.GetFEN();
-
-	Chessboard.MakeMove(Move);
-	Chessboard.DeclareResult(Result);
-	Chessboard.UndoMove()
-
-
-	BoardState       [13]uint64
-	WhiteToMove      bool
-	EnPassantSquare  pair
-	BlackKingCastle  bool
-	BlackQueenCastle bool
-	WhiteKingCastle  bool
-	WhiteQueenCastle bool
-	Moves            []string
-
-*/
-
 type Chessboard struct {
 	// Variant     string
 	BoardState       [13]uint64
@@ -147,22 +120,25 @@ type Chessboard struct {
 	HalfmoveClock   int
 	FullmoveCounter int
 }
+type Result int
 
+/*
 // Main interaction interface
 
-func (c *Chessboard) CheckMoveLegality(Move)
-func (c *Chessboard) GetMoveList()
-func (c *Chessboard) GetTripleRepetition()
-func (c *Chessboard) InsufficientMaterial()
-func (c *Chessboard) GetResult()
-func (c *Chessboard) GetFEN()
+// func (c *Chessboard) CheckMoveLegality() bool
+// func (c *Chessboard) GetMoveList() []Move
+// func (c *Chessboard) GetTripleRepetition() bool  // Check if there is a tripple repetition to claim draw
+// func (c *Chessboard) InsufficientMaterial() bool // Check if there is sufficient material
+// func (c *Chessboard) GetResult() Result
+// func (c *Chessboard) GetFEN() string
 
-func (c *Chessboard) MakeMove(Move)
-func (c *Chessboard) DeclareResult()
-func (c *Chessboard) UndoMove()
+// func (c *Chessboard) MakeMove(Move) bool // Returns if the move was executed
+// func (c *Chessboard) DeclareResult(Result)
+// func (c *Chessboard) UndoMove()
 
-func (c *Chessboard) PrintBoard()
-func (c *Chessboard) GameOver() bool
+// func (c *Chessboard) PrintBoard()
+// func (c *Chessboard) GameOver() bool
+*/
 
 // WARNING: FUNCTION VERY PERIGLOSA. Use at your own risk or smth
 func sq(s string) pair {
@@ -187,6 +163,7 @@ func pairToInt(a pair) int {
 func CreateChessboard(FEN string) Chessboard {
 	chessgame := Chessboard{}
 	row, col := int8(0), int8(0)
+	fmt.Printf(initialFEN)
 	FENparts := strings.Split(initialFEN, " ")
 
 	// position parsing
@@ -196,7 +173,6 @@ func CreateChessboard(FEN string) Chessboard {
 			col += int8(c - '0')
 			continue
 		}
-
 		if c == '/' {
 			row++
 			col = 0
@@ -206,7 +182,6 @@ func CreateChessboard(FEN string) Chessboard {
 		position := pairToInt(pair{col, row})
 		chessgame.BoardState[piece] |= 1 << position
 		col++
-
 	}
 
 	// side to move parsing
@@ -401,6 +376,16 @@ func (c *Chessboard) GetKingPosition() pair {
 	return intToPair(64)
 }
 
+func (c *Chessboard) PrintBoard() {
+	for row := int8(7); row >= 0; row-- {
+		for col := int8(0); col < 8; col++ {
+			pieceChar := c.getPiece(pair{row: row, col: col})
+			fmt.Printf("%v%v%c\t", row, col, pieceToChar[pieceChar])
+		}
+		fmt.Println("")
+	}
+}
+
 func (c *Chessboard) CheckMoveLegality(move Move) bool {
 	// check inbounds
 	if !(inBounds(move.from) || inBounds(move.from)) {
@@ -424,7 +409,6 @@ func (c *Chessboard) CheckMoveLegality(move Move) bool {
 	}
 
 	// lists of changes
-	//
 
 	var squaresToErase []pair     //
 	var squaresToPutPieces []pair // squares where there are pieces
@@ -518,8 +502,9 @@ func (c *Chessboard) getPiece(square pair) int {
 	if !inBounds(square) {
 		return 0
 	}
+
 	for i := 0; i < len(c.BoardState); i++ {
-		if c.BoardState[i]&uint64(1<<pairToInt(square)) == 1 {
+		if ((c.BoardState[i]) & uint64(1<<pairToInt(square))) != 0 {
 			return i
 		}
 	}
