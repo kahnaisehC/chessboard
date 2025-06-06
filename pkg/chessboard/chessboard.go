@@ -162,7 +162,7 @@ func pairToInt(a pair) int {
 
 func CreateChessboard(FEN string) Chessboard {
 	chessgame := Chessboard{}
-	row, col := int8(0), int8(0)
+	row, col := int8(7), int8(0)
 	fmt.Printf(initialFEN)
 	FENparts := strings.Split(initialFEN, " ")
 
@@ -174,7 +174,7 @@ func CreateChessboard(FEN string) Chessboard {
 			continue
 		}
 		if c == '/' {
-			row++
+			row--
 			col = 0
 			continue
 		}
