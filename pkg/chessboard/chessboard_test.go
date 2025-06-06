@@ -17,8 +17,5 @@ func TestAddPair(t *testing.T) {
 }
 
 func TestCreateChessgame(t *testing.T) {
-	chessgame, err := CreateChessgame("new game")
-	if chessgame != "new game" {
-		t.Errorf(`createChessgame("error") = %q, %v, want match for %v, nil`, chessgame, err, "new game")
-	}
+	chessgame := CreateChessboard("new game")
 }

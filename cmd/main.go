@@ -7,9 +7,9 @@ import (
 )
 
 func main() {
-	c := chessboard.CreateChessgame()
+	c := chessboard.CreateChessboard("")
 	for _, row := range c.BoardState {
 		fmt.Printf("%b\n", row)
 	}
-	c.DoSomething()
+	c.PrintBoard()
 }
