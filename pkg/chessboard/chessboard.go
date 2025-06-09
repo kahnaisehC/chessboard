@@ -251,7 +251,7 @@ func (c *Chessboard) putPiece(s pair, piece int) {
 }
 
 func (c *Chessboard) SquareIsThreatened(white bool, p pair) bool {
-	if white {
+	if !white {
 		// pawn
 		if c.getPiece(addPair(p, pair{col: 1, row: 1})) == BPAWN {
 			return true
@@ -363,13 +363,13 @@ func (c *Chessboard) SquareIsThreatened(white bool, p pair) bool {
 	return false
 }
 
-func (c *Chessboard) GetKingPosition() pair {
+func (c *Chessboard) GetKingPosition(color bool) pair {
 	king := BKING
-	if c.WhiteToMove {
+	if color == WHITE {
 		king = WKING
 	}
 	for i := 0; i < 64; i++ {
-		if 1 == ((1 << i) | c.BoardState[king]) {
+		if ((1 << i) | c.BoardState[king]) != 0 {
 			return intToPair(i)
 		}
 	}
@@ -386,33 +386,32 @@ func (c *Chessboard) PrintBoard() {
 	}
 }
 
+// TODO: FIX THIS FUNCTION makes changes to the chessboard instead of being stateless
 func (c *Chessboard) CheckMoveLegality(move Move) bool {
 	// check inbounds
 	if !(inBounds(move.from) || inBounds(move.from)) {
+		fmt.Println("out of bounds error")
 		return false
 	}
 	fromPiece := c.getPiece(move.from)
 	//  check if frompiece is not empty
 	if fromPiece == 0 {
+		fmt.Println("from square without pieces")
 		return false
 	}
 	toPiece := c.getPiece(move.to)
 
 	// toPiece is not of the same color
 	if toPiece != 0 && isWhite(toPiece) == isWhite(fromPiece) {
+		fmt.Println("from piece and piece fro to square are the same color")
 		return false
 	}
 
 	// if is the correct turn to play
 	if isWhite(fromPiece) != c.WhiteToMove {
+		fmt.Println("wrong turn to move")
 		return false
 	}
-
-	// lists of changes
-
-	var squaresToErase []pair     //
-	var squaresToPutPieces []pair // squares where there are pieces
-	var piecesPerSquare []int     //
 
 	// make move
 	switch {
@@ -420,12 +419,15 @@ func (c *Chessboard) CheckMoveLegality(move Move) bool {
 	case fromPiece == BKING:
 		if (move.from == pair{col: 4, row: 7}) && (move.to == pair{col: 2, row: 7}) {
 			if !c.BlackQueenCastle {
+				fmt.Println("black cant queen castle")
 				return false
 			}
 			if c.SquareIsThreatened(WHITE, sq("e8")) || c.SquareIsThreatened(WHITE, sq("d8")) || c.SquareIsThreatened(WHITE, sq("c8")) {
+				fmt.Println("kings passing square is threatened")
 				return false
 			}
 			if c.getPiece(sq("d8")) != 0 || c.getPiece(sq("c8")) != 0 || c.getPiece(sq("b8")) != 0 {
+				fmt.Println("squares are interrupted")
 				return false
 			}
 
@@ -434,12 +436,15 @@ func (c *Chessboard) CheckMoveLegality(move Move) bool {
 		}
 		if (move.from == pair{col: 4, row: 7}) && (move.to == pair{col: 6, row: 7}) {
 			if !c.BlackKingCastle {
+				fmt.Println("black cant king castle")
 				return false
 			}
 			if c.SquareIsThreatened(WHITE, sq("e8")) || c.SquareIsThreatened(WHITE, sq("f8")) || c.SquareIsThreatened(WHITE, sq("g8")) {
+				fmt.Println("kings passing square is threatened")
 				return false
 			}
 			if c.getPiece(sq("f8")) != 0 || c.getPiece(sq("g8")) != 0 {
+				fmt.Println("squares are interrupted")
 				return false
 			}
 			// WARNING: I THINK THERE IS NO OTHER EDGE CASE
@@ -448,12 +453,15 @@ func (c *Chessboard) CheckMoveLegality(move Move) bool {
 	case fromPiece == WKING:
 		if (move.from == pair{col: 4, row: 0}) && (move.to == pair{col: 2, row: 0}) {
 			if !c.WhiteQueenCastle {
+				fmt.Println("white cant queen castle")
 				return false
 			}
 			if c.SquareIsThreatened(BLACK, sq("e1")) || c.SquareIsThreatened(BLACK, sq("d1")) || c.SquareIsThreatened(BLACK, sq("c1")) {
+				fmt.Println("kings passing square is threatened")
 				return false
 			}
 			if c.getPiece(sq("d1")) != 0 || c.getPiece(sq("c1")) != 0 || c.getPiece(sq("b1")) != 0 {
+				fmt.Println("squares are interrupted")
 				return false
 			}
 			// WARNING: I THINK THERE IS NO OTHER EDGE CASE
@@ -461,19 +469,24 @@ func (c *Chessboard) CheckMoveLegality(move Move) bool {
 		}
 		if (move.from == pair{col: 4, row: 0}) && (move.to == pair{col: 6, row: 0}) {
 			if !c.WhiteKingCastle {
+				fmt.Println("white cant king castle")
 				return false
 			}
 			if c.SquareIsThreatened(BLACK, sq("e1")) || c.SquareIsThreatened(BLACK, sq("f1")) || c.SquareIsThreatened(BLACK, sq("g1")) {
+				fmt.Println("kings passing square is threatened")
 				return false
 			}
 			if c.getPiece(sq("f1")) != 0 || c.getPiece(sq("g1")) != 0 {
+				fmt.Println("squares are interrupted")
 				return false
 			}
 			// WARNING: I THINK THERE IS NO OTHER EDGE CASE
 			return true
 		}
+	// TODO: Write en passant edge case
 	// en passant
 
+	// TODO: write Promotion edge ccase
 	// promotion
 
 	// if non special move
@@ -483,19 +496,19 @@ func (c *Chessboard) CheckMoveLegality(move Move) bool {
 	}
 
 	// check legality of c.BoardState
-	kingPosition := c.GetKingPosition()
-	threat := c.SquareIsThreatened(c.WhiteToMove, kingPosition)
+	kingPosition := c.GetKingPosition(c.WhiteToMove)
+	fmt.Println(kingPosition)
+	threat := c.SquareIsThreatened(!c.WhiteToMove, kingPosition)
 
 	// restore c.BoardState
-	for _, square := range squaresToErase {
-		c.erasePiece(square)
+	c.putPiece(move.to, toPiece)
+	c.putPiece(move.from, fromPiece)
+	if threat == true {
+		fmt.Println("king square is threatenned")
+		return false
 	}
 
-	for i := 0; i < len(piecesPerSquare); i++ {
-		c.putPiece(squaresToPutPieces[i], piecesPerSquare[i])
-	}
-
-	return threat
+	return true
 }
 
 func (c *Chessboard) getPiece(square pair) int {
@@ -720,11 +733,20 @@ func (c *Chessboard) getMoveList() []Move {
 	return movements
 }
 
-func (c *Chessboard) makeMove(move string) error {
+func (c *Chessboard) MakeMove(move string) error {
+	/*
+		version 0 format: _fromsquare_tosquare_promotion
+		eg: 0e2e4_
+		eg: 0e7e8Q
+		eg: 0g1f3_
+	*/
+
 	if len(move) < 5 {
-		return errors.New("Invalid move string")
+		fmt.Println(move)
+		return errors.New("Invalid move string: " + move)
 	}
 	version := move[0]
+	var fromPiece int
 	var from pair
 	var to pair
 	var promotion int
@@ -732,12 +754,12 @@ func (c *Chessboard) makeMove(move string) error {
 	case '0':
 		{
 			from = pair{
-				col: int8(move[1] - '`'),
-				row: int8(move[2] - '0'),
+				col: int8(move[1] - 'a'),
+				row: int8(move[2] - '1'),
 			}
 			to = pair{
-				col: int8(move[3] - '`'),
-				row: int8(move[4] - '0'),
+				col: int8(move[3] - 'a'),
+				row: int8(move[4] - '1'),
 			}
 			promotion = int(move[5] - '0')
 		}
@@ -747,13 +769,26 @@ func (c *Chessboard) makeMove(move string) error {
 	}
 
 	if !c.CheckMoveLegality(Move{from: from, to: to, promotion: int(promotion)}) {
+		fmt.Println("from: %v, to: %v, promotion: %v\n", from, to, promotion)
 		return errors.New("the move is Illegal")
 	}
 
-	c.putPiece(to, c.getPiece(from))
+	// update state of the board
+	c.putPiece(to, fromPiece)
 	c.erasePiece(from)
-	if promotion != 0 {
+	if promotion > 0 && promotion < 14 {
 		c.putPiece(to, promotion)
+	}
+
+	c.WhiteToMove = !(c.WhiteToMove)
+
+	// edge cases
+
+	// two step pawn en passant update
+	c.EnPassantSquare = pair{}
+	if (fromPiece == WPAWN || fromPiece == BPAWN) &&
+		(from.col-to.col == 2 || from.col-to.col == -2) {
+		c.EnPassantSquare = addPair(from, pair{col: (from.col - to.col) / 2})
 	}
 
 	return nil

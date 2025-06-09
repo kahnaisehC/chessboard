@@ -12,4 +12,13 @@ func main() {
 		fmt.Printf("%b\n", row)
 	}
 	c.PrintBoard()
+	for {
+		var move string
+		fmt.Scanf("%s", &move)
+		err := c.MakeMove("0" + move + "_")
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		c.PrintBoard()
+	}
 }
