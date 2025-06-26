@@ -142,7 +142,15 @@ type Result int
 
 // WARNING: FUNCTION VERY PERIGLOSA. Use at your own risk or smth
 func sq(s string) pair {
+	fmt.Printf("%s == %c %c\n", s, rune(s[0]-'a'), rune(s[1]-'0'))
 	return pair{col: int8(s[0] - 'a'), row: int8(s[1] - '0')}
+}
+
+func pairToString(p pair) string {
+	ret := ""
+	ret += string(int8('a') + p.col)
+	ret += string(int8('1') + p.row)
+	return ret
 }
 
 func addPair(a, b pair) pair {
@@ -250,36 +258,124 @@ func (c *Chessboard) putPiece(s pair, piece int) {
 	c.BoardState[piece] |= bitAux
 }
 
-func (c *Chessboard) SquareIsThreatened(white bool, p pair) bool {
-	if !white {
+func (c *Chessboard) GetFEN() string {
+	FEN := ""
+
+	//"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
+	// position parsing
+	for row := int8(7); row > 0; row-- {
+		if row != 7 {
+			FEN += "/"
+		}
+		emptySpaces := 0
+		for col := int8(0); col < 8; col++ {
+			piece := c.getPiece(pair{col: col, row: row})
+			if piece == 0 {
+				emptySpaces++
+			} else {
+				if emptySpaces != 0 {
+					FEN += strconv.Itoa(emptySpaces)
+					emptySpaces = 0
+				}
+				char := pieceToChar[piece]
+				FEN += string(char)
+			}
+
+		}
+		if emptySpaces != 0 {
+			FEN += strconv.Itoa(emptySpaces)
+			emptySpaces = 0
+		}
+	}
+	FEN += " "
+
+	// whose turn it is
+	if c.WhiteToMove {
+		FEN += "w"
+	} else {
+		FEN += "b"
+	}
+	FEN += " "
+
+	// Castling rights
+	if c.WhiteKingCastle {
+		FEN += "K"
+	}
+	if c.WhiteQueenCastle {
+		FEN += "Q"
+	}
+	if c.BlackKingCastle {
+		FEN += "k"
+	}
+	if c.BlackQueenCastle {
+		FEN += "q"
+	}
+	if FEN[len(FEN)-1] == ' ' {
+		FEN += "-"
+	}
+	FEN += " "
+
+	// En passant Square
+	if c.EnPassantSquare != (pair{}) {
+		FEN += pairToString(c.EnPassantSquare)
+	} else {
+		FEN += "-"
+	}
+	FEN += " "
+
+	// HalfmoveClock
+	FEN += strconv.Itoa(c.HalfmoveClock)
+	FEN += " "
+
+	// FullmoveClock
+	FEN += strconv.Itoa(c.FullmoveCounter)
+
+	return FEN
+}
+
+func (c *Chessboard) SquareIsThreatened(color bool, p pair) bool {
+	var auxSquare pair
+	fmt.Printf("%v", p)
+	if color == BLACK {
 		// pawn
-		if c.getPiece(addPair(p, pair{col: 1, row: 1})) == BPAWN {
+		auxSquare = addPair(p, pair{col: 1, row: 1})
+		if c.getPiece(auxSquare) == BPAWN {
+			fmt.Println("Black king threatened by white pawn in %s", auxSquare)
 			return true
 		}
-		if c.getPiece(addPair(p, pair{col: 1, row: -1})) == BPAWN {
+		auxSquare = addPair(p, pair{col: 1, row: -1})
+		if c.getPiece(auxSquare) == BPAWN {
+			fmt.Println("Black king threatened by black pawn in %s", auxSquare)
 			return true
 		}
 		// knight
 		for _, move := range knightMoves {
-			if c.getPiece(addPair(p, move)) == BKNIGHT {
+			piece := BKNIGHT
+			nextSquare := addPair(p, move)
+			if c.getPiece(nextSquare) == BKNIGHT {
+				fmt.Printf("Square: %v is threatenned by a %c in %v", p, pieceToChar[piece], nextSquare)
 				return true
 			}
 		}
 		// king
 		for _, move := range kingMoves {
-			if c.getPiece(addPair(p, move)) == BKING {
+			piece := BKING
+			nextSquare := addPair(p, move)
+			if c.getPiece(nextSquare) == BKING {
+				fmt.Printf("Square: %v is threatenned by a %c in %v", p, pieceToChar[piece], nextSquare)
 				return true
 			}
 		}
 		// bishop
 		for _, direction := range bishopSlides {
-			nextSquare := addPair(p, direction)
-			for inBounds(nextSquare) {
+			for nextSquare := addPair(p, direction); inBounds(nextSquare); nextSquare = addPair(nextSquare, direction) {
 				piece := c.getPiece(nextSquare)
 				if isWhite(piece) {
 					break
 				}
 				if piece == BQUEEN || piece == BBISHOP {
+					fmt.Printf("Square: %v is threatenned by a %c in %v", p, pieceToChar[piece], nextSquare)
 					return true
 				}
 				if piece != 0 {
@@ -290,13 +386,13 @@ func (c *Chessboard) SquareIsThreatened(white bool, p pair) bool {
 		}
 		// rook
 		for _, direction := range rookSlides {
-			nextSquare := addPair(p, direction)
-			for inBounds(nextSquare) {
+			for nextSquare := addPair(p, direction); inBounds(nextSquare); nextSquare = addPair(nextSquare, direction) {
 				piece := c.getPiece(nextSquare)
 				if isWhite(piece) {
 					break
 				}
 				if piece == BQUEEN || piece == BROOK {
+					fmt.Printf("Square: %v is threatenned by a %c in %v", p, pieceToChar[piece], nextSquare)
 					return true
 				}
 				if piece != 0 {
@@ -307,21 +403,29 @@ func (c *Chessboard) SquareIsThreatened(white bool, p pair) bool {
 		}
 	} else {
 		// pawn
-		if c.getPiece(addPair(p, pair{col: -1, row: 1})) == WPAWN {
+		nextSquare := addPair(p, pair{col: -1, row: -1})
+		if c.getPiece(nextSquare) == WPAWN {
+			fmt.Printf("Square: %v is threatenned by a %c in %v", p, pieceToChar[WPAWN], nextSquare)
 			return true
 		}
-		if c.getPiece(addPair(p, pair{col: -1, row: -1})) == WPAWN {
+		nextSquare = addPair(p, pair{col: -1, row: -1})
+		if c.getPiece(nextSquare) == WPAWN {
+			fmt.Printf("Square: %v is threatenned by a %c in %v", p, pieceToChar[WPAWN], nextSquare)
 			return true
 		}
 		// knight
 		for _, move := range knightMoves {
-			if c.getPiece(addPair(p, move)) == WKNIGHT {
+			nextSquare := addPair(p, move)
+			if c.getPiece(nextSquare) == WKNIGHT {
+				fmt.Printf("Square: %v is threatenned by a %c in %v", p, pieceToChar[WKING], nextSquare)
 				return true
 			}
 		}
 		// king
 		for _, move := range kingMoves {
-			if c.getPiece(addPair(p, move)) == WKING {
+			nextSquare := addPair(p, move)
+			if c.getPiece(nextSquare) == WKING {
+				fmt.Printf("Square: %v is threatenned by a %c in %v", p, pieceToChar[WKING], nextSquare)
 				return true
 			}
 		}
@@ -334,6 +438,7 @@ func (c *Chessboard) SquareIsThreatened(white bool, p pair) bool {
 					break
 				}
 				if piece == WQUEEN || piece == WBISHOP {
+					fmt.Printf("Square: %v is threatenned by a %c in %v", p, pieceToChar[piece], nextSquare)
 					return true
 				}
 				if piece != 0 {
@@ -351,6 +456,7 @@ func (c *Chessboard) SquareIsThreatened(white bool, p pair) bool {
 					break
 				}
 				if piece == WQUEEN || piece == WROOK {
+					fmt.Printf("Square: %v is threatenned by a %c in %v", p, pieceToChar[piece], nextSquare)
 					return true
 				}
 				if piece != 0 {
@@ -369,7 +475,8 @@ func (c *Chessboard) GetKingPosition(color bool) pair {
 		king = WKING
 	}
 	for i := 0; i < 64; i++ {
-		if ((1 << i) | c.BoardState[king]) != 0 {
+		if ((1 << i) & c.BoardState[king]) != 0 {
+			println(i)
 			return intToPair(i)
 		}
 	}
@@ -380,7 +487,7 @@ func (c *Chessboard) PrintBoard() {
 	for row := int8(7); row >= 0; row-- {
 		for col := int8(0); col < 8; col++ {
 			pieceChar := c.getPiece(pair{row: row, col: col})
-			fmt.Printf("%v%v%c\t", row, col, pieceToChar[pieceChar])
+			fmt.Printf("|%c\t", pieceToChar[pieceChar])
 		}
 		fmt.Println("")
 	}
@@ -389,7 +496,7 @@ func (c *Chessboard) PrintBoard() {
 // TODO: FIX THIS FUNCTION makes changes to the chessboard instead of being stateless
 func (c *Chessboard) CheckMoveLegality(move Move) bool {
 	// check inbounds
-	if !(inBounds(move.from) || inBounds(move.from)) {
+	if !(inBounds(move.from) || inBounds(move.to)) {
 		fmt.Println("out of bounds error")
 		return false
 	}
@@ -497,7 +604,7 @@ func (c *Chessboard) CheckMoveLegality(move Move) bool {
 
 	// check legality of c.BoardState
 	kingPosition := c.GetKingPosition(c.WhiteToMove)
-	fmt.Println(kingPosition)
+
 	threat := c.SquareIsThreatened(!c.WhiteToMove, kingPosition)
 
 	// restore c.BoardState
@@ -741,12 +848,11 @@ func (c *Chessboard) MakeMove(move string) error {
 		eg: 0g1f3_
 	*/
 
-	if len(move) < 5 {
+	if len(move) < 6 {
 		fmt.Println(move)
 		return errors.New("Invalid move string: " + move)
 	}
 	version := move[0]
-	var fromPiece int
 	var from pair
 	var to pair
 	var promotion int
@@ -763,10 +869,12 @@ func (c *Chessboard) MakeMove(move string) error {
 			}
 			promotion = int(move[5] - '0')
 		}
-
 	default:
 		return errors.New("Invalid version of move")
 	}
+
+	fromPiece := c.getPiece(from)
+	// toPiece := c.getPiece(to)
 
 	if !c.CheckMoveLegality(Move{from: from, to: to, promotion: int(promotion)}) {
 		fmt.Println("from: %v, to: %v, promotion: %v\n", from, to, promotion)

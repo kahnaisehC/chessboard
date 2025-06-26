@@ -11,6 +11,7 @@ func main() {
 	for _, row := range c.BoardState {
 		fmt.Printf("%b\n", row)
 	}
+	fmt.Println(c.GetFEN())
 	c.PrintBoard()
 	for {
 		var move string
@@ -20,5 +21,6 @@ func main() {
 			fmt.Println(err.Error())
 		}
 		c.PrintBoard()
+		fmt.Println(c.GetFEN())
 	}
 }
