@@ -142,8 +142,7 @@ type Result int
 
 // WARNING: FUNCTION VERY PERIGLOSA. Use at your own risk or smth
 func sq(s string) pair {
-	fmt.Printf("%s == %c %c\n", s, rune(s[0]-'a'), rune(s[1]-'0'))
-	return pair{col: int8(s[0] - 'a'), row: int8(s[1] - '0')}
+	return pair{col: int8(s[0] - 'a'), row: int8(s[1] - '1')}
 }
 
 func pairToString(p pair) string {
@@ -524,7 +523,7 @@ func (c *Chessboard) CheckMoveLegality(move Move) bool {
 	switch {
 	// castling
 	case fromPiece == BKING:
-		if (move.from == pair{col: 4, row: 7}) && (move.to == pair{col: 2, row: 7}) {
+		if (move.from == sq("e8")) && (move.to == sq("c8")) {
 			if !c.BlackQueenCastle {
 				fmt.Println("black cant queen castle")
 				return false
@@ -541,7 +540,7 @@ func (c *Chessboard) CheckMoveLegality(move Move) bool {
 			// WARNING: I THINK THERE IS NO OTHER EDGE CASE.
 			return true
 		}
-		if (move.from == pair{col: 4, row: 7}) && (move.to == pair{col: 6, row: 7}) {
+		if (move.from == sq("e8") && (move.to == sq("g8") {
 			if !c.BlackKingCastle {
 				fmt.Println("black cant king castle")
 				return false
@@ -840,6 +839,10 @@ func (c *Chessboard) getMoveList() []Move {
 	return movements
 }
 
+func stringToMove(s string) (Move, error) {
+	return Move{}, nil
+}
+
 func (c *Chessboard) MakeMove(move string) error {
 	/*
 		version 0 format: _fromsquare_tosquare_promotion
@@ -874,7 +877,7 @@ func (c *Chessboard) MakeMove(move string) error {
 	}
 
 	fromPiece := c.getPiece(from)
-	// toPiece := c.getPiece(to)
+	toPiece := c.getPiece(to)
 
 	if !c.CheckMoveLegality(Move{from: from, to: to, promotion: int(promotion)}) {
 		fmt.Println("from: %v, to: %v, promotion: %v\n", from, to, promotion)
@@ -888,9 +891,86 @@ func (c *Chessboard) MakeMove(move string) error {
 		c.putPiece(to, promotion)
 	}
 
-	c.WhiteToMove = !(c.WhiteToMove)
-
 	// edge cases
+	// sWcastle
+	if fromPiece == WKING &&
+		from == sq("e1") &&
+		to == sq("g1") {
+		c.erasePiece(sq("h1"))
+		c.putPiece(sq("f1"), WROOK)
+	}
+
+	// sBCastle
+	if fromPiece == BKING &&
+		from == sq("e8") &&
+		to == sq("g8") {
+		c.erasePiece(sq("h8"))
+		c.putPiece(sq("f8"), BROOK)
+	}
+
+	// lwcastle
+	if fromPiece == WKING &&
+		from == sq("e1") &&
+		to == sq("c1") {
+		c.erasePiece(sq("a1"))
+		c.putPiece(sq("d1"), WROOK)
+	}
+
+	// lbcastle
+	if fromPiece == BKING &&
+		from == sq("e8") &&
+		to == sq("c8") {
+		c.erasePiece(sq("a8"))
+		c.putPiece(sq("d8"), BROOK)
+	}
+
+	// en passant edge case
+	if c.EnPassantSquare == to &&
+		(fromPiece == WPAWN || fromPiece == BPAWN) {
+		c.erasePiece(pair{col: c.EnPassantSquare.col, row: from.row})
+	}
+
+	// update chessboard hidden properties
+	// update castling rights
+	if fromPiece == BKING {
+		c.BlackKingCastle = false
+		c.BlackQueenCastle = false
+	}
+
+	if c.getPiece(sq("h8")) != BROOK {
+
+		fmt.Println(sq("h8"))
+		c.BlackKingCastle = false
+	}
+	if c.getPiece(sq("a8")) != BROOK {
+		c.BlackQueenCastle = false
+	}
+	if fromPiece == WKING {
+		c.WhiteKingCastle = false
+		c.WhiteQueenCastle = false
+	}
+
+	if c.getPiece(sq("h1")) != WROOK {
+		c.WhiteKingCastle = false
+	}
+	if c.getPiece(sq("a1")) != WROOK {
+		c.WhiteQueenCastle = false
+	}
+
+	// HalfmoveClock update
+	if fromPiece == WPAWN || fromPiece == BPAWN || toPiece != 0 {
+		c.HalfmoveClock = 0
+	} else {
+		c.HalfmoveClock++
+	}
+
+	// FullmoveCounter update
+	if !(c.WhiteToMove) {
+		c.FullmoveCounter++
+	}
+
+	// Update Whose turn it is
+	c.WhiteToMove = !(c.WhiteToMove)
 
 	// two step pawn en passant update
 	c.EnPassantSquare = pair{}
