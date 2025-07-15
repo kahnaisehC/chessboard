@@ -494,8 +494,8 @@ func (c *Chessboard) PrintBoard() {
 
 // TODO: FIX THIS FUNCTION makes changes to the chessboard instead of being stateless
 func (c *Chessboard) CheckMoveLegality(move Move) bool {
-	// check inbounds
-	if !(inBounds(move.from) || inBounds(move.to)) {
+// check inbounds
+if !(inBounds(move.from) || inBounds(move.to)) {
 		fmt.Println("out of bounds error")
 		return false
 	}
