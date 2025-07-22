@@ -108,6 +108,7 @@ type Move struct {
 
 type Chessboard struct {
 	// Variant     string
+
 	BoardState       [13]uint64
 	WhiteToMove      bool
 	EnPassantSquare  pair
@@ -121,24 +122,6 @@ type Chessboard struct {
 	FullmoveCounter int
 }
 type Result int
-
-/*
-// Main interaction interface
-
-// func (c *Chessboard) CheckMoveLegality() bool
-// func (c *Chessboard) GetMoveList() []Move
-// func (c *Chessboard) GetTripleRepetition() bool  // Check if there is a tripple repetition to claim draw
-// func (c *Chessboard) InsufficientMaterial() bool // Check if there is sufficient material
-// func (c *Chessboard) GetResult() Result
-// func (c *Chessboard) GetFEN() string
-
-// func (c *Chessboard) MakeMove(Move) bool // Returns if the move was executed
-// func (c *Chessboard) DeclareResult(Result)
-// func (c *Chessboard) UndoMove()
-
-// func (c *Chessboard) PrintBoard()
-// func (c *Chessboard) GameOver() bool
-*/
 
 // WARNING: FUNCTION VERY PERIGLOSA. Use at your own risk or smth
 func sq(s string) pair {
@@ -167,10 +150,18 @@ func pairToInt(a pair) int {
 	return int(8*a.row + a.col)
 }
 
+// NOTE: write a FEN validator
+func ValidateFEN(FEN string) (ok bool, logs string) {
+	return true, ""
+}
+
 func CreateChessboard(FEN string) Chessboard {
 	chessgame := Chessboard{}
 	row, col := int8(7), int8(0)
-	fmt.Printf(initialFEN)
+
+	if ok, _ := ValidateFEN(FEN); !ok {
+		FEN = initialFEN
+	}
 	FENparts := strings.Split(initialFEN, " ")
 
 	// position parsing
@@ -243,9 +234,11 @@ func inBounds(p pair) bool {
 func (c *Chessboard) erasePiece(s pair) {
 	// NOTE: check if range is a copy or a reference. It copies
 	piecePosition := pairToInt(s)
+	// bitmask with all ones except the piecePosition
 	bitAux := ^uint64(0) ^ uint64(1<<piecePosition)
 
 	for i := 0; i < len(c.BoardState); i++ {
+		// will return c.Boardstate with the piecePosition zeroed
 		c.BoardState[i] &= bitAux
 	}
 }
@@ -257,9 +250,11 @@ func (c *Chessboard) putPiece(s pair, piece int) {
 	c.BoardState[piece] |= bitAux
 }
 
-func (c *Chessboar) GetPGN() string{
+// yo yo yo
+func (c *Chessboard) GetPGN() string {
 	PGN := ""
-		/*
+
+	/*
 
 		[Event "F/S Return Match"]
 		[Site "Belgrade, Serbia JUG"]
@@ -277,7 +272,7 @@ func (c *Chessboar) GetPGN() string{
 		f3 Bc8 34. Kf2 Bf5 35. Ra7 g6 36. Ra6+ Kc5 37. Ke1 Nf4 38. g3 Nxh3 39. Kd2 Kb5
 		40. Rd6 Kc5 41. Ra6 Nf2 42. g4 Bd3 43. Re6 1/2-1/2
 
-		*/
+	*/
 
 	return PGN
 }
@@ -519,8 +514,8 @@ func (c *Chessboard) PrintBoard() {
 
 // TODO: FIX THIS FUNCTION makes changes to the chessboard instead of being stateless
 func (c *Chessboard) CheckMoveLegality(move Move) bool {
-// check inbounds
-if !(inBounds(move.from) || inBounds(move.to)) {
+	// check inbounds
+	if !(inBounds(move.from) || inBounds(move.to)) {
 		fmt.Println("out of bounds error")
 		return false
 	}
@@ -565,7 +560,7 @@ if !(inBounds(move.from) || inBounds(move.to)) {
 			// WARNING: I THINK THERE IS NO OTHER EDGE CASE.
 			return true
 		}
-		if (move.from == sq("e8") && (move.to == sq("g8") {
+		if (move.from == sq("e8")) && (move.to == sq("g8")) {
 			if !c.BlackKingCastle {
 				fmt.Println("black cant king castle")
 				return false
