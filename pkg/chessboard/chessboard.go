@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kahnaisehC/chessboard/pgntags"
+	"github.com/kahnaisehC/chessboard/pkg/pgntags"
 )
 
 const (
