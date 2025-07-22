@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/kahnaisehC/chessboard/pgntags"
 )
 
 const (
@@ -108,6 +110,7 @@ type Move struct {
 
 type Chessboard struct {
 	// Variant     string
+	PGNTags PGNTags.PGNTags
 
 	BoardState       [13]uint64
 	WhiteToMove      bool
